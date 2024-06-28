@@ -6,8 +6,7 @@ from e3v3se_display.encoder import Encoder
 from e3v3se_display.printerInterface import PrinterData
 from e3v3se_display.TJC3224 import TJC3224_LCD
 
-
-from RPi import GPIO
+from gpiozero import Button
 
 
 def current_milli_time():
@@ -342,7 +341,6 @@ class E3V3SE_DISPLAY:
     icon_TEXT_preheat_tpu = 34
     icon_TEXT_preheat_pla = 35
     icon_TEXT_auto_home = 36
-    icon_TEXT_Info = 37
     icon_TEXT_disable_stepper = 38
     icon_TEXT_cooldown = 41
     icon_TEXT_move_x = 42
@@ -438,16 +436,17 @@ class E3V3SE_DISPLAY:
     PREHEAT_CASE_TOTAL = PREHEAT_CASE_SAVE
 
     def __init__(
-        self, USARTx, baudrate, encoder_pins, button_pin, octoPrint_API_Key, Klipper_Socket, language 
+        self, USARTx, baudrate, encoder_pins, dial_press_pin, octoPrint_API_Key, Klipper_Socket, language
     ):  
         self.selected_language = language
-        GPIO.setmode(GPIO.BCM)
+
         self.encoder = Encoder(encoder_pins[0], encoder_pins[1])
-        self.button_pin = button_pin
-        GPIO.setup(self.button_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-        GPIO.add_event_detect(
-            self.button_pin, GPIO.BOTH, callback=self.encoder_has_data
-        )
+
+        self.dial_press_pin = dial_press_pin
+        self.dial_press_button = Button(self.dial_press_pin)
+        self.dial_press_button.when_pressed = self.encoder_has_data
+        self.dial_press_button.when_released = self.encoder_has_data
+
         self.encoder.callback = self.encoder_has_data
         self.EncodeLast = 0
         self.EncodeMS = current_milli_time() + self.ENCODER_WAIT
@@ -3617,7 +3616,7 @@ class E3V3SE_DISPLAY:
         if update and self.checkkey != self.MainMenu:
             self.Draw_Status_Area(update)
 
-    def encoder_has_data(self, val):
+    def encoder_has_data(self):
         if self.checkkey == self.MainMenu:
             self.HMI_MainMenu()
         elif self.checkkey == self.SelectFile:
@@ -3693,7 +3692,7 @@ class E3V3SE_DISPLAY:
         elif self.encoder.value > self.EncodeLast:
             self.EncodeLast = self.encoder.value
             return self.ENCODER_DIFF_CCW
-        elif not GPIO.input(self.button_pin):
+        elif not self.dial_press_button.is_pressed:
             if self.EncodeEnter > current_milli_time():  # prevent double clicks
                 return self.ENCODER_DIFF_NO
             self.EncodeEnter = current_milli_time() + self.ENCODER_WAIT_ENTER

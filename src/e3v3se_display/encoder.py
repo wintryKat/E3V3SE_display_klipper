@@ -6,28 +6,30 @@ with no to minimal changes. All credits go to the original author.
 # Class to monitor a rotary encoder and update a value.  You can either read the value when you need it, by calling getValue(), or
 # you can configure a callback which will be called whenever the value changes.
 
-import RPi.GPIO as GPIO
+from gpiozero import Button
 
 
 class Encoder:
-    def __init__(self, leftPin, rightPin, callback=None):
-        self.leftPin = leftPin
-        self.rightPin = rightPin
+    def __init__(self, dial_left_pin, dial_right_pin, callback=None):
+        self.dial_left_pin = dial_left_pin
+        self.dial_right_pin = dial_right_pin
         self.value = 0
         self.state = "00"
         self.direction = None
         self.callback = callback
-        GPIO.setup(self.leftPin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-        GPIO.setup(self.rightPin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-        GPIO.add_event_detect(self.leftPin, GPIO.BOTH, callback=self.transitionOccurred)
-        GPIO.add_event_detect(
-            self.rightPin, GPIO.BOTH, callback=self.transitionOccurred
-        )
+
+        self.dial_left_button = Button(dial_left_pin)
+        self.dial_left_button.when_pressed = self.transitionOccurred
+        self.dial_left_button.when_released = self.transitionOccurred
+
+        self.dial_right_button = Button(dial_right_pin)
+        self.dial_right_button.when_pressed = self.transitionOccurred
+        self.dial_right_button.when_released = self.transitionOccurred
 
     def transitionOccurred(self, channel):
-        p1 = GPIO.input(self.leftPin)
-        p2 = GPIO.input(self.rightPin)
-        newState = "{}{}".format(p1, p2)
+        dial_left_state = '1' if self.dial_left_button.is_pressed else '0'
+        dial_right_state = '1' if self.dial_right_button.is_pressed else '0'
+        newState = dial_left_state + dial_right_state
 
         if self.state == "00":  # Resting position
             if newState == "01":  # Turned right 1
