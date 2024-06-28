@@ -1,5 +1,6 @@
 gpiozero~=2.0.1
 imutils~=0.5.4
+lgpio~=0.2.2.0
 multitimer~=0.3
 pyserial~=3.5
 requests~=2.32.3
